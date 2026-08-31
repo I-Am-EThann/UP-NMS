@@ -117,6 +117,16 @@ docker compose exec backend npm run db:seed
 You'll be logged out of any existing session and need to log in again with the new password. Nothing else
 in the database is touched — zones, devices, and alert history are untouched by this.
 
+### "I typed the right password but login just doesn't work"
+
+Check the browser's dev tools (Network tab) — if the `/api/auth/login` request returns `200 OK` with a
+`Set-Cookie` header but you're still bounced back to the login page, this is almost certainly
+`COOKIE_SECURE` being `true` while the site is served over plain `http://` (no TLS). Browsers **silently
+discard** a cookie marked `Secure` unless the page was loaded over HTTPS — `curl` won't show you this
+problem (it doesn't enforce the rule), which makes it look like the backend is broken when it isn't. Set
+`COOKIE_SECURE=false` in `.env` (see `.env.example`) if you don't have HTTPS in front of the app yet, then
+`docker compose up -d backend` to pick up the change — no rebuild/migrate/seed needed.
+
 Or in dev mode without Docker: `docker compose up -d postgres influxdb minio` for the infra services, then
 `npm run dev:backend` + `npm run dev:frontend` (with `apps/backend/.env.local` and `apps/frontend/.env.local`
 copied from their `.env.example` files) in separate terminals.

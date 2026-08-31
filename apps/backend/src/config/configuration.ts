@@ -2,6 +2,7 @@ export interface AppConfig {
   nodeEnv: string;
   port: number;
   corsOrigin: string;
+  cookieSecure: boolean;
   jwt: {
     secret: string;
     expiresIn: string;
@@ -44,6 +45,22 @@ export default (): AppConfig => ({
   nodeEnv: process.env.NODE_ENV ?? 'development',
   port: parseInt(process.env.PORT ?? '3001', 10),
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:3000',
+  // Controls the auth cookie's `Secure` attribute — browsers silently
+  // refuse to store a cookie marked Secure unless the page was loaded over
+  // HTTPS, so this must be false for any deployment served over plain HTTP
+  // (confirmed to break login this way on a real VM: the login API call
+  // itself succeeds and returns a valid Set-Cookie header — curl doesn't
+  // enforce this rule and will happily show it — but a real browser drops
+  // the cookie immediately, so the person is silently never actually
+  // logged in). Previously this was hardcoded to `NODE_ENV === 'production'`,
+  // which is wrong for any production deployment that doesn't sit behind
+  // HTTPS (e.g. no Nginx/TLS reverse proxy set up yet) — default here
+  // matches that old behavior for anyone who doesn't set COOKIE_SECURE
+  // explicitly, but it's now independently overridable.
+  cookieSecure:
+    process.env.COOKIE_SECURE != null
+      ? process.env.COOKIE_SECURE === 'true'
+      : process.env.NODE_ENV === 'production',
   jwt: {
     secret: requireEnv('JWT_SECRET', 'dev-only-change-me'),
     expiresIn: process.env.JWT_EXPIRES_IN ?? '8h',
