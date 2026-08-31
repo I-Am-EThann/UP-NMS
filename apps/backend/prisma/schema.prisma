@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMINISTRATOR
+}
+
+enum DeviceKind {
+  SWITCH
+  ACCESS_POINT
+}
+
+enum DeviceStatus {
+  ONLINE
+  OFFLINE
+}
+
+enum Severity {
+  NORMAL
+  WARNING
+  MAJOR
+  CRITICAL
+}
+
+enum PortLinkStatus {
+  UP
+  DOWN
+}
+
+enum AlertMessageKey {
+  DEVICE_OFFLINE
+  HIGH_BANDWIDTH
+  HIGH_MEMORY
+  HIGH_CPU
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  displayName  String
+  role         Role     @default(ADMINISTRATOR)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("users")
+}
+
+/// Zone only stores identity — device/switch/AP counts and alert-severity
+/// summaries are always DERIVED from the Device/Alert tables (never stored),
+/// mirroring how the frontend's buildZones() computes Zone from Device[].
+model Zone {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  devices Device[]
+  alerts  Alert[]
+
+  @@map("zones")
+}
+
+model Device {
+  id     String     @id @default(cuid())
+  zoneId String
+  zone   Zone       @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  kind   DeviceKind
+
+  name      String
+  ipAddress String @unique
+  brand     String
+  model     String
+  imageUrl  String?
+
+  mapLat Float?
+  mapLng Float?
+
+  status     DeviceStatus @default(ONLINE)
+  /// Current health classification — offline devices are always CRITICAL.
+  severity   Severity     @default(NORMAL)
+  lastUpdate DateTime     @default(now())
+
+  cpuUsagePercent    Float @default(0)
+  memoryUsagePercent Float @default(0)
+
+  /// Access Point only
+  connectedClients      Int?
+  bandwidthUsagePercent Float?
+  trafficInMbps         Float?
+  trafficOutMbps        Float?
+
+  /// Switch only
+  ports Port[]
+
+  alerts Alert[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([zoneId])
+  @@map("devices")
+}
+
+model Port {
+  id       String @id @default(cuid())
+  deviceId String
+  device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  portNumber            Int
+  status                PortLinkStatus @default(DOWN)
+  speedMbps             Int            @default(0)
+  bandwidthUsagePercent Float          @default(0)
+  trafficInMbps         Float          @default(0)
+  trafficOutMbps        Float          @default(0)
+
+  @@unique([deviceId, portNumber])
+  @@map("ports")
+}
+
+/// Event log for the Alerts UI — separate from Device.severity (the current
+/// health classification). Not used to compute Zone summaries; those come
+/// from Device.severity directly, same as the frontend's mock architecture.
+model Alert {
+  id       String @id @default(cuid())
+  zoneId   String
+  zone     Zone   @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  deviceId String
+  device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  severity   Severity
+  messageKey AlertMessageKey
+  createdAt  DateTime        @default(now())
+
+  @@index([zoneId])
+  @@index([deviceId])
+  @@map("alerts")
+}

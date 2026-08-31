@@ -1,0 +1,19 @@
+{
+  "name": "up-nms",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "overrides": {
+    "@prisma/client": "6.12.0",
+    "prisma": "6.12.0"
+  },
+  "scripts": {
+    "dev:frontend": "npm run dev --workspace=apps/frontend",
+    "dev:backend": "npm run start:dev --workspace=apps/backend",
+    "build:frontend": "npm run build --workspace=apps/frontend",
+    "build:backend": "npm run build --workspace=apps/backend",
+    "lint:frontend": "npm run lint --workspace=apps/frontend",
+    "lint:backend": "npm run lint --workspace=apps/backend"
+  }
+}

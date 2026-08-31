@@ -1,0 +1,130 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+:root {
+  /* Brand — deep violet control-room palette */
+  --brand-950: #2a0f5c;
+  --brand-900: #341272;
+  --brand-700: #6d28d9;
+  --brand-600: #7c3aed;
+  --brand-500: #8b5cf6;
+  --brand-200: #ddd0fa;
+  --brand-100: #f1eafb;
+  --brand-50: #f8f6fd;
+
+  /* Surfaces */
+  --background: #ffffff;
+  --surface: #faf9fd;
+  --surface-raised: #ffffff;
+  --border-subtle: #e7e2f2;
+  --border-strong: #d6cdec;
+
+  /* Ink */
+  --ink-900: #19152a;
+  --ink-600: #4b4560;
+  --ink-400: #85809a;
+
+  /* Severity — kept legible/semantic for NOC scanning */
+  --sev-normal: #16a34a;
+  --sev-normal-bg: #eafaf0;
+  --sev-warning: #d97706;
+  --sev-warning-bg: #fef6e7;
+  --sev-major: #ea580c;
+  --sev-major-bg: #fef1e8;
+  --sev-critical: #dc2626;
+  --sev-critical-bg: #fdeceb;
+  --sev-offline: #9491a3;
+  --sev-offline-bg: #f1f0f5;
+
+  --radius: 0.625rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+
+  --color-ink-900: var(--ink-900);
+  --color-ink-600: var(--ink-600);
+  --color-ink-400: var(--ink-400);
+
+  --color-brand-950: var(--brand-950);
+  --color-brand-900: var(--brand-900);
+  --color-brand-700: var(--brand-700);
+  --color-brand-600: var(--brand-600);
+  --color-brand-500: var(--brand-500);
+  --color-brand-200: var(--brand-200);
+  --color-brand-100: var(--brand-100);
+  --color-brand-50: var(--brand-50);
+
+  --color-sev-normal: var(--sev-normal);
+  --color-sev-normal-bg: var(--sev-normal-bg);
+  --color-sev-warning: var(--sev-warning);
+  --color-sev-warning-bg: var(--sev-warning-bg);
+  --color-sev-major: var(--sev-major);
+  --color-sev-major-bg: var(--sev-major-bg);
+  --color-sev-critical: var(--sev-critical);
+  --color-sev-critical-bg: var(--sev-critical-bg);
+  --color-sev-offline: var(--sev-offline);
+  --color-sev-offline-bg: var(--sev-offline-bg);
+
+  --font-display: var(--font-space-grotesk);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+body {
+  background: var(--background);
+  color: var(--ink-900);
+  font-family: var(--font-sans);
+}
+
+/* Signature element: a heartbeat pulse used only for live/online + critical
+   status indicators — a small nod to signal monitoring, kept out of the
+   rest of the interface so it stays meaningful rather than decorative. */
+@keyframes signal-pulse {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.55;
+  }
+  70% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+.signal-dot {
+  position: relative;
+  display: inline-flex;
+}
+
+.signal-dot::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: currentColor;
+  animation: signal-pulse 2s cubic-bezier(0.4, 0, 0.3, 1) infinite;
+}
+
+.signal-dot--fast::before {
+  animation-duration: 0.9s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .signal-dot::before {
+    animation: none;
+    display: none;
+  }
+}
