@@ -158,7 +158,6 @@ export interface Dictionary {
     bandwidthUsage: string;
     connectedClients: string;
     lastUpdate: (formatted: string) => string;
-    liveUpdateNote: string;
   };
   portTable: {
     port: string;
@@ -363,7 +362,6 @@ export const en: Dictionary = {
     bandwidthUsage: "Bandwidth Usage",
     connectedClients: "Connected Clients",
     lastUpdate: (formatted) => `Last update: ${formatted}`,
-    liveUpdateNote: " · live updates via WebSocket, device data refreshed every 5 min",
   },
   portTable: {
     port: "Port",
@@ -568,7 +566,6 @@ export const th: Dictionary = {
     bandwidthUsage: "Bandwidth Usage",
     connectedClients: "Connected Clients",
     lastUpdate: (formatted) => `Last update: ${formatted}`,
-    liveUpdateNote: " · อัปเดตสดผ่าน WebSocket ดึงข้อมูลจากอุปกรณ์ทุก 5 นาที",
   },
   portTable: {
     port: "Port",

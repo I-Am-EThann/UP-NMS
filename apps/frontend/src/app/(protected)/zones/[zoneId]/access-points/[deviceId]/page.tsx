@@ -97,7 +97,6 @@ function AccessPointMonitor({
               </div>
               <div className="sm:col-span-2 font-mono text-xs text-ink-400">
                 {t.deviceDetail.lastUpdate(new Date(device.lastUpdate).toLocaleString(intlTag))}
-                {device.status === "online" && t.deviceDetail.liveUpdateNote}
               </div>
             </CardContent>
           </Card>
