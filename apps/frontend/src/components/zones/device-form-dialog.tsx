@@ -227,7 +227,6 @@ function DeviceForm({
             onChange={(e) => setSnmpCommunity(e.target.value)}
             className="font-mono"
           />
-          <p className="text-[11px] text-ink-400">{t.deviceForm.snmpCommunityHint}</p>
         </div>
 
         <div className="space-y-1.5">
@@ -274,7 +273,6 @@ function DeviceForm({
           />
         </div>
       </div>
-      <p className="-mt-2 text-[11px] text-ink-400">{t.deviceForm.mapHint}</p>
 
       {errorCode && (
         <p className="text-xs text-sev-critical">{t.deviceForm.errors[errorCode]}</p>
