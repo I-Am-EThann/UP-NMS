@@ -79,6 +79,14 @@ model Device {
   model     String
   imageUrl  String?
 
+  /// Per-device SNMP v2c community string override. Null/blank means "use
+  /// the server-wide SNMP_COMMUNITY default" — most devices on a network
+  /// share one community string, but real deployments can have some
+  /// devices configured with a different one (confirmed in practice: two
+  /// Aruba switches on the same network needed different community
+  /// strings).
+  snmpCommunity String?
+
   mapLat Float?
   mapLng Float?
 

@@ -65,6 +65,7 @@ function DeviceForm({
   const [ipAddress, setIpAddress] = React.useState(device?.ipAddress ?? "");
   const [brand, setBrand] = React.useState(device?.brand ?? "");
   const [model, setModel] = React.useState(device?.model ?? "");
+  const [snmpCommunity, setSnmpCommunity] = React.useState(device?.snmpCommunity ?? "");
   const [lat, setLat] = React.useState(device?.mapPosition?.lat?.toString() ?? "");
   const [lng, setLng] = React.useState(device?.mapPosition?.lng?.toString() ?? "");
   const [imageUrl, setImageUrl] = React.useState<string | undefined>(device?.imageUrl);
@@ -106,7 +107,7 @@ function DeviceForm({
         : undefined;
 
     const result = device
-      ? await updateDevice(device.id, { name, ipAddress, brand, model, imageUrl, mapPosition })
+      ? await updateDevice(device.id, { name, ipAddress, brand, model, snmpCommunity, imageUrl, mapPosition })
       : await addDevice({
           zoneId,
           kind,
@@ -114,6 +115,7 @@ function DeviceForm({
           ipAddress,
           brand,
           model,
+          snmpCommunity,
           imageUrl,
           mapPosition,
           status: "online",
@@ -214,6 +216,18 @@ function DeviceForm({
             className="font-mono"
             required
           />
+        </div>
+
+        <div className="col-span-2 space-y-1.5">
+          <Label htmlFor="device-snmp-community">{t.deviceForm.snmpCommunityLabel}</Label>
+          <Input
+            id="device-snmp-community"
+            placeholder="public"
+            value={snmpCommunity}
+            onChange={(e) => setSnmpCommunity(e.target.value)}
+            className="font-mono"
+          />
+          <p className="text-[11px] text-ink-400">{t.deviceForm.snmpCommunityHint}</p>
         </div>
 
         <div className="space-y-1.5">

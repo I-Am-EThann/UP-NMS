@@ -15,6 +15,7 @@ interface DeviceRow {
   ipAddress: string;
   brand: string;
   severity: Severity;
+  snmpCommunity: string | null;
   ports: { portNumber: number }[];
 }
 
@@ -60,6 +61,7 @@ export class MonitoringService {
         ipAddress: true,
         brand: true,
         severity: true,
+        snmpCommunity: true,
         ports: { select: { portNumber: true } },
       },
     });
@@ -86,6 +88,7 @@ export class MonitoringService {
         ipAddress: true,
         brand: true,
         severity: true,
+        snmpCommunity: true,
         ports: { select: { portNumber: true } },
       },
     });
@@ -124,6 +127,7 @@ export class MonitoringService {
       ipAddress: device.ipAddress,
       kind: device.kind,
       brand: device.brand,
+      snmpCommunity: device.snmpCommunity,
       portNumbers: device.ports.map((p) => p.portNumber),
     };
 

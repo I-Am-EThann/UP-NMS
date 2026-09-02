@@ -75,6 +75,40 @@ describe('DevicesService', () => {
       expect(dataArg.connectedClients).toBeUndefined();
     });
 
+    it('stores a per-device SNMP community override when provided', async () => {
+      zoneFindUnique.mockResolvedValue({ id: 'z1', name: 'Zone' });
+      deviceCreate.mockResolvedValue({ id: 'd1' });
+
+      await service.create('z1', {
+        kind: 'SWITCH',
+        name: 'SW-1',
+        ipAddress: '10.0.0.1',
+        brand: 'Cisco',
+        model: 'X',
+        snmpCommunity: 'snmp@UPManage',
+      });
+
+      expect(deviceCreate.mock.calls[0][0].data.snmpCommunity).toBe(
+        'snmp@UPManage',
+      );
+    });
+
+    it('normalizes a blank SNMP community to null so the server default applies', async () => {
+      zoneFindUnique.mockResolvedValue({ id: 'z1', name: 'Zone' });
+      deviceCreate.mockResolvedValue({ id: 'd1' });
+
+      await service.create('z1', {
+        kind: 'SWITCH',
+        name: 'SW-1',
+        ipAddress: '10.0.0.1',
+        brand: 'Cisco',
+        model: 'X',
+        snmpCommunity: '',
+      });
+
+      expect(deviceCreate.mock.calls[0][0].data.snmpCommunity).toBeNull();
+    });
+
     it('creates an ACCESS_POINT with zeroed AP-only fields', async () => {
       zoneFindUnique.mockResolvedValue({ id: 'z1', name: 'Zone' });
       deviceCreate.mockResolvedValue({ id: 'd2' });
@@ -161,6 +195,20 @@ describe('DevicesService', () => {
       deviceUpdate.mockResolvedValue({ id: 'd1', name: 'Renamed' });
       await service.update('d1', { name: 'Renamed' });
       expect(deviceUpdate.mock.calls[0][0].data).toEqual({ name: 'Renamed' });
+    });
+
+    it('updates the SNMP community override and normalizes blank to null', async () => {
+      deviceUpdate.mockResolvedValue({ id: 'd1' });
+      await service.update('d1', { snmpCommunity: 'snmp@UPManage' });
+      expect(deviceUpdate.mock.calls[0][0].data).toEqual({
+        snmpCommunity: 'snmp@UPManage',
+      });
+
+      deviceUpdate.mockClear();
+      await service.update('d1', { snmpCommunity: '' });
+      expect(deviceUpdate.mock.calls[0][0].data).toEqual({
+        snmpCommunity: null,
+      });
     });
   });
 

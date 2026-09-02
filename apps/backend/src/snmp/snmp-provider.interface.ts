@@ -27,6 +27,11 @@ export interface PollableDevice {
   brand: string;
   /** Existing port numbers, so a real provider knows how many to poll for. */
   portNumbers: number[];
+  /**
+   * Per-device SNMP v2c community string override. Null/undefined means
+   * "use the provider's server-wide default" — see RealSnmpProvider.
+   */
+  snmpCommunity?: string | null;
 }
 
 export interface SnmpProvider {

@@ -40,6 +40,14 @@ export class CreateDeviceDto {
   @MaxLength(500)
   imageUrl?: string;
 
+  /// Per-device SNMP v2c community string override — leave blank to use
+  /// the server-wide default (SNMP_COMMUNITY). See schema.prisma for why
+  /// this needs to be settable per device rather than one global value.
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  snmpCommunity?: string;
+
   @IsOptional()
   @Type(() => Number)
   @IsNumber()

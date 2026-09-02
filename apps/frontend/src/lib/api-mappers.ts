@@ -52,6 +52,7 @@ export interface BackendDevice {
   ipAddress: string;
   brand: string;
   model: string;
+  snmpCommunity?: string | null;
   imageUrl?: string | null;
   mapLat?: number | null;
   mapLng?: number | null;
@@ -87,6 +88,7 @@ export function mapDevice(d: BackendDevice): Device {
     ipAddress: d.ipAddress,
     brand: d.brand,
     model: d.model,
+    snmpCommunity: d.snmpCommunity ?? undefined,
     imageUrl: d.imageUrl ?? undefined,
     mapPosition:
       d.mapLat != null && d.mapLng != null
@@ -163,6 +165,7 @@ export interface DeviceWritePayload {
   ipAddress: string;
   brand: string;
   model: string;
+  snmpCommunity?: string;
   imageUrl?: string;
   mapLat?: number;
   mapLng?: number;
@@ -173,6 +176,7 @@ export function deviceToWritePayload(input: {
   ipAddress: string;
   brand: string;
   model: string;
+  snmpCommunity?: string;
   imageUrl?: string;
   mapPosition?: { lat: number; lng: number };
 }): DeviceWritePayload {
@@ -181,6 +185,7 @@ export function deviceToWritePayload(input: {
     ipAddress: input.ipAddress,
     brand: input.brand,
     model: input.model,
+    snmpCommunity: input.snmpCommunity,
     imageUrl: input.imageUrl,
     mapLat: input.mapPosition?.lat,
     mapLng: input.mapPosition?.lng,

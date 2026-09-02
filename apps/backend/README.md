@@ -67,6 +67,14 @@ after a scheduled poll finishes would sit at its 0%/placeholder values for up to
 anyone could tell whether it was actually working. Failures here are logged and swallowed — the normal
 scheduled poll picks the device up regardless of whether this one-off attempt succeeded.
 
+**Per-device SNMP community override** — `Device.snmpCommunity` (nullable) lets one specific device use a
+different SNMP v2c community string than the server-wide default (`SNMP_COMMUNITY`). Confirmed necessary in
+practice, not just theoretical: two real Aruba switches on the same network turned out to be configured
+with two different community strings, so a single global value couldn't reach both. `RealSnmpProvider`
+checks `device.snmpCommunity` first and falls back to the default when it's null/blank — set via the
+"SNMP Community" field in the add/edit device form (leave blank for the common case of "same as everything
+else").
+
 Each poll, per device:
 1. Calls `SnmpProvider.pollDevice()` — whichever provider is active (see below)
 2. `buildDeviceUpdate()` (`device-update.util.ts`, a pure function) recomputes severity via

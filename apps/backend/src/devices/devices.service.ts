@@ -56,6 +56,7 @@ export class DevicesService {
       brand: dto.brand,
       model: dto.model,
       imageUrl: dto.imageUrl,
+      snmpCommunity: dto.snmpCommunity || null,
       mapLat: dto.mapLat,
       mapLng: dto.mapLng,
       status: 'ONLINE' as const,
@@ -109,6 +110,9 @@ export class DevicesService {
           ...(dto.brand !== undefined ? { brand: dto.brand } : {}),
           ...(dto.model !== undefined ? { model: dto.model } : {}),
           ...(dto.imageUrl !== undefined ? { imageUrl: dto.imageUrl } : {}),
+          ...(dto.snmpCommunity !== undefined
+            ? { snmpCommunity: dto.snmpCommunity || null }
+            : {}),
           ...(dto.mapLat !== undefined ? { mapLat: dto.mapLat } : {}),
           ...(dto.mapLng !== undefined ? { mapLng: dto.mapLng } : {}),
         },

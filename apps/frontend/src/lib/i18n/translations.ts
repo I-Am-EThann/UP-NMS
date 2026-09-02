@@ -128,6 +128,8 @@ export interface Dictionary {
     ipLabel: string;
     brandLabel: string;
     modelLabel: string;
+    snmpCommunityLabel: string;
+    snmpCommunityHint: string;
     latLabel: string;
     lngLabel: string;
     mapHint: string;
@@ -332,6 +334,9 @@ export const en: Dictionary = {
     ipLabel: "IP Address",
     brandLabel: "Brand",
     modelLabel: "Model",
+    snmpCommunityLabel: "SNMP Community (optional)",
+    snmpCommunityHint:
+      "Leave blank to use the server's default community string. Only set this if this specific device uses a different one.",
     latLabel: "Position (Latitude)",
     lngLabel: "Position (Longitude)",
     mapHint: "Enter coordinates and it'll show up as a pin on the zone map right away",
@@ -537,6 +542,9 @@ export const th: Dictionary = {
     ipLabel: "IP Address",
     brandLabel: "ยี่ห้อ",
     modelLabel: "รุ่น",
+    snmpCommunityLabel: "SNMP Community (ไม่บังคับ)",
+    snmpCommunityHint:
+      "ปล่อยว่างไว้จะใช้ค่าเริ่มต้นของเซิร์ฟเวอร์ ใส่เฉพาะตอนที่อุปกรณ์ตัวนี้ใช้ community string ต่างจากอุปกรณ์อื่น",
     latLabel: "ตำแหน่ง (Latitude)",
     lngLabel: "ตำแหน่ง (Longitude)",
     mapHint: "กรอกพิกัดแล้วจะไปแสดงเป็นหมุดในแผนที่ของโซนทันที",

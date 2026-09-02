@@ -41,7 +41,7 @@ interface PortCounterSample {
 @Injectable()
 export class RealSnmpProvider implements SnmpProvider {
   private readonly logger = new Logger(RealSnmpProvider.name);
-  private readonly community: string;
+  private readonly defaultCommunity: string;
 
   // Bandwidth is a *rate*, not an instantaneous SNMP value — ifInOctets/
   // ifOutOctets are cumulative counters, so we need two samples to compute
@@ -50,11 +50,18 @@ export class RealSnmpProvider implements SnmpProvider {
   private readonly previousPortCounters = new Map<string, PortCounterSample>();
 
   constructor(config: ConfigService<AppConfig, true>) {
-    this.community = config.get('snmp', { infer: true }).community;
+    this.defaultCommunity = config.get('snmp', { infer: true }).community;
   }
 
   async pollDevice(device: PollableDevice): Promise<DevicePollResult> {
-    const session = snmp.createSession(device.ipAddress, this.community, {
+    // Per-device override takes priority — confirmed necessary in practice:
+    // two Aruba switches on the same real network turned out to be
+    // configured with two different community strings, so one server-wide
+    // value can't cover every device. An empty string is treated the same
+    // as "not set" (falls back to the default) since that's what an
+    // untouched form field submits.
+    const community = device.snmpCommunity || this.defaultCommunity;
+    const session = snmp.createSession(device.ipAddress, community, {
       timeout: SNMP_TIMEOUT_MS,
       retries: SNMP_RETRIES,
       version: snmp.Version2c,

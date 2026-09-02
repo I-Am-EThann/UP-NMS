@@ -31,6 +31,8 @@ export interface Device {
   ipAddress: string;
   brand: string;
   model: string;
+  /** Per-device SNMP v2c community override — blank means use the server's default. */
+  snmpCommunity?: string;
   imageUrl?: string;
   mapPosition?: { lat: number; lng: number };
   status: DeviceStatus;

@@ -169,6 +169,7 @@ export function NetworkDataProvider({ children }: { children: React.ReactNode })
           ipAddress: input.ipAddress ?? "",
           brand: input.brand ?? "",
           model: input.model ?? "",
+          snmpCommunity: input.snmpCommunity,
           imageUrl: input.imageUrl,
           mapPosition: input.mapPosition,
         });
@@ -178,6 +179,7 @@ export function NetworkDataProvider({ children }: { children: React.ReactNode })
         if (input.ipAddress !== undefined) body.ipAddress = payload.ipAddress;
         if (input.brand !== undefined) body.brand = payload.brand;
         if (input.model !== undefined) body.model = payload.model;
+        if (input.snmpCommunity !== undefined) body.snmpCommunity = payload.snmpCommunity;
         if (input.imageUrl !== undefined) body.imageUrl = payload.imageUrl;
         if (input.mapPosition !== undefined) {
           body.mapLat = payload.mapLat;
