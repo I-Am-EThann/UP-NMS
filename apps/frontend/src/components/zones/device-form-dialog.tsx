@@ -68,6 +68,13 @@ function DeviceForm({
   const [snmpCommunity, setSnmpCommunity] = React.useState(device?.snmpCommunity ?? "");
   const [lat, setLat] = React.useState(device?.mapPosition?.lat?.toString() ?? "");
   const [lng, setLng] = React.useState(device?.mapPosition?.lng?.toString() ?? "");
+  // "" (not undefined) means "explicitly remove the image" — see the remove
+  // button below. This distinction matters: updateDevice() in
+  // network-data-context.tsx only sends a field to the backend when it's
+  // !== undefined, so setting this back to undefined on remove would make
+  // the removal silently do nothing (confirmed bug: image stayed after
+  // clicking remove + save, even after a hard refresh, because the PATCH
+  // request never included imageUrl at all).
   const [imageUrl, setImageUrl] = React.useState<string | undefined>(device?.imageUrl);
   const [isUploadingImage, setIsUploadingImage] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -176,7 +183,7 @@ function DeviceForm({
           {imageUrl && (
             <button
               type="button"
-              onClick={() => setImageUrl(undefined)}
+              onClick={() => setImageUrl("")}
               className="flex items-center gap-1 text-xs text-ink-400 hover:text-sev-critical"
             >
               <X className="size-3" />

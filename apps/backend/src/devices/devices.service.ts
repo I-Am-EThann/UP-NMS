@@ -55,7 +55,7 @@ export class DevicesService {
       ipAddress: dto.ipAddress,
       brand: dto.brand,
       model: dto.model,
-      imageUrl: dto.imageUrl,
+      imageUrl: dto.imageUrl || undefined,
       snmpCommunity: dto.snmpCommunity || null,
       mapLat: dto.mapLat,
       mapLng: dto.mapLng,
@@ -109,7 +109,9 @@ export class DevicesService {
           ...(dto.ipAddress !== undefined ? { ipAddress: dto.ipAddress } : {}),
           ...(dto.brand !== undefined ? { brand: dto.brand } : {}),
           ...(dto.model !== undefined ? { model: dto.model } : {}),
-          ...(dto.imageUrl !== undefined ? { imageUrl: dto.imageUrl } : {}),
+          ...(dto.imageUrl !== undefined
+            ? { imageUrl: dto.imageUrl || null }
+            : {}),
           ...(dto.snmpCommunity !== undefined
             ? { snmpCommunity: dto.snmpCommunity || null }
             : {}),

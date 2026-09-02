@@ -210,6 +210,17 @@ describe('DevicesService', () => {
         snmpCommunity: null,
       });
     });
+
+    it('clears imageUrl to null when the frontend sends an empty string (remove-image button)', async () => {
+      // Regression test — confirmed bug: the remove-image button used to
+      // reset local state to `undefined`, which network-data-context.tsx's
+      // updateDevice() treats as "field not touched" and never sends over
+      // the wire at all. The frontend now sends "" instead to signal an
+      // explicit removal; this asserts the backend actually clears it.
+      deviceUpdate.mockResolvedValue({ id: 'd1' });
+      await service.update('d1', { imageUrl: '' });
+      expect(deviceUpdate.mock.calls[0][0].data).toEqual({ imageUrl: null });
+    });
   });
 
   describe('findOne', () => {
