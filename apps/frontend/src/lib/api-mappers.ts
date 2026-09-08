@@ -37,6 +37,7 @@ function lower<T extends string>(value: string): T {
 
 export interface BackendPort {
   portNumber: number;
+  name?: string | null;
   status: BackendPortStatus;
   speedMbps: number;
   bandwidthUsagePercent: number;
@@ -71,6 +72,7 @@ export interface BackendDevice {
 export function mapPort(p: BackendPort): PortStatus {
   return {
     portNumber: p.portNumber,
+    name: p.name ?? undefined,
     status: lower<PortStatus["status"]>(p.status),
     speedMbps: p.speedMbps,
     bandwidthUsagePercent: p.bandwidthUsagePercent,

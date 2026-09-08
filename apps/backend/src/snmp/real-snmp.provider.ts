@@ -325,6 +325,12 @@ export class RealSnmpProvider implements SnmpProvider {
           const status: 'UP' | 'DOWN' = operStatus === 1 ? 'UP' : 'DOWN';
           const inOctets = Number(row['10']);
           const outOctets = Number(row['16']);
+          // ifDescr (column 2) — the device's own name for this port, e.g.
+          // "GigabitEthernet1/0/1". Comes along for free since we're
+          // already walking the whole ifTable row; normalized the same way
+          // as hrStorageType earlier in this file, since net-snmp can hand
+          // this back as a Buffer depending on the device/library version.
+          const name = normalizeOidValue(row['2']) || undefined;
 
           const cacheKey = `${device.id}:${portNumber}`;
           const previous = this.previousPortCounters.get(cacheKey);
@@ -362,6 +368,7 @@ export class RealSnmpProvider implements SnmpProvider {
 
           return {
             portNumber,
+            name,
             status,
             speedMbps,
             bandwidthUsagePercent,

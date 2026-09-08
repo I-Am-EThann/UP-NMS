@@ -1,5 +1,9 @@
 export interface PortPollResult {
   portNumber: number;
+  /** Real port name/description from the device (IF-MIB ifDescr), e.g.
+   *  "GigabitEthernet1/0/1" — undefined only in the error/fallback paths
+   *  where the device couldn't be reached at all. */
+  name?: string;
   status: 'UP' | 'DOWN';
   speedMbps: number;
   bandwidthUsagePercent: number;

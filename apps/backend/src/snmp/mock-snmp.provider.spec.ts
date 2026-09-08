@@ -64,6 +64,7 @@ describe('MockSnmpProvider', () => {
     expect(result.ports).toEqual([
       {
         portNumber: 1,
+        name: 'GigabitEthernet1/0/1',
         status: 'DOWN',
         speedMbps: 0,
         bandwidthUsagePercent: 0,
@@ -72,6 +73,7 @@ describe('MockSnmpProvider', () => {
       },
       {
         portNumber: 2,
+        name: 'GigabitEthernet1/0/2',
         status: 'DOWN',
         speedMbps: 0,
         bandwidthUsagePercent: 0,

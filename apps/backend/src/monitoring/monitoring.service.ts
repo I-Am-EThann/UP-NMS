@@ -165,6 +165,7 @@ export class MonitoringService {
             },
             update: {
               status: port.status,
+              name: port.name,
               speedMbps: port.speedMbps,
               bandwidthUsagePercent: port.bandwidthUsagePercent,
               trafficInMbps: port.trafficInMbps,
@@ -173,6 +174,7 @@ export class MonitoringService {
             create: {
               deviceId: device.id,
               portNumber: port.portNumber,
+              name: port.name,
               status: port.status,
               speedMbps: port.speedMbps,
               bandwidthUsagePercent: port.bandwidthUsagePercent,

@@ -61,6 +61,7 @@ export class MockSnmpProvider implements SnmpProvider {
 function upPort(portNumber: number): PortPollResult {
   return {
     portNumber,
+    name: `GigabitEthernet1/0/${portNumber}`,
     status: 'UP',
     speedMbps: 1000,
     bandwidthUsagePercent: randomInRange(15, 80),
@@ -72,6 +73,7 @@ function upPort(portNumber: number): PortPollResult {
 function downPort(portNumber: number): PortPollResult {
   return {
     portNumber,
+    name: `GigabitEthernet1/0/${portNumber}`,
     status: 'DOWN',
     speedMbps: 0,
     bandwidthUsagePercent: 0,

@@ -122,6 +122,11 @@ model Port {
   device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
 
   portNumber            Int
+  /// Real port name/description from the device (SNMP ifDescr), e.g.
+  /// "GigabitEthernet1/0/1". Null for ports discovered before this field
+  /// existed, or if the device doesn't answer ifDescr — the frontend falls
+  /// back to showing "Port {portNumber}" in that case.
+  name                  String?
   status                PortLinkStatus @default(DOWN)
   speedMbps             Int            @default(0)
   bandwidthUsagePercent Float          @default(0)

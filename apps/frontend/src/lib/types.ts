@@ -16,6 +16,8 @@ export interface Zone {
 
 export interface PortStatus {
   portNumber: number;
+  /** Real port name/description from the device (e.g. "GigabitEthernet1/0/1"). */
+  name?: string;
   status: "up" | "down";
   speedMbps: number;
   bandwidthUsagePercent: number;

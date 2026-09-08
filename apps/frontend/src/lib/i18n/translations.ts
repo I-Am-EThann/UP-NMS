@@ -169,6 +169,8 @@ export interface Dictionary {
     noPorts: string;
     up: string;
     down: string;
+    /** Fallback label when the device didn't report a real port name (ifDescr). */
+    portFallback: (portNumber: number) => string;
   };
   trafficChart: {
     collecting: string;
@@ -373,6 +375,7 @@ export const en: Dictionary = {
     noPorts: "No port data",
     up: "Up",
     down: "Down",
+    portFallback: (portNumber) => `Port ${portNumber}`,
   },
   trafficChart: {
     collecting: "Collecting real-time traffic data...",
@@ -577,6 +580,7 @@ export const th: Dictionary = {
     noPorts: "ไม่มีข้อมูลพอร์ต",
     up: "Up",
     down: "Down",
+    portFallback: (portNumber) => `พอร์ต ${portNumber}`,
   },
   trafficChart: {
     collecting: "กำลังรวบรวมข้อมูล Traffic แบบเรียลไทม์...",

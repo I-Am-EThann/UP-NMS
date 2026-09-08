@@ -28,7 +28,7 @@ export function PortTable({ ports }: { ports: PortStatus[] }) {
           {ports.map((port) => (
             <tr key={port.portNumber}>
               <td className="py-2 pr-4 font-mono text-xs text-ink-900">
-                Gi0/{port.portNumber}
+                {port.name ?? t.portTable.portFallback(port.portNumber)}
               </td>
               <td className="py-2 pr-4">
                 <Badge variant={port.status === "up" ? "normal" : "offline"}>

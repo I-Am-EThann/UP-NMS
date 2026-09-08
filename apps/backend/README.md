@@ -90,7 +90,11 @@ Each poll, per device:
 - **`real`** — polls actual devices via `net-snmp`. CPU (`hrProcessorTable`) and memory (`hrStorageTable`)
   use standard HOST-RESOURCES-MIB tables; switch ports use IF-MIB (`ifTable`), computing bandwidth from
   `ifInOctets`/`ifOutOctets` counter deltas between polls (first poll after a restart has no baseline, so
-  it reports 0 — expected). Confirmed working against a real Aruba 6200F switch.
+  it reports 0 — expected), and reading the port's real name (`ifDescr`, e.g. `GigabitEthernet1/0/1`) from
+  the same table walk — the frontend used to hardcode a fake Cisco-style `Gi0/N` label regardless of the
+  actual device, a leftover from before this was wired to real hardware; it now falls back to `Port N` only
+  when a device genuinely doesn't answer `ifDescr`, not as the default display. Confirmed working against a
+  real Aruba 6200F switch.
   > **Note on OID levels**: `net-snmp`'s `session.table()` expects the *table*-level OID (e.g. `ifTable`),
   > not the *entry*-level OID (`ifEntry`) — it appends `.1.` internally to reach the entry, then the column,
   > then the row index. Passing the entry-level OID (as earlier versions of this file did) makes every row's
