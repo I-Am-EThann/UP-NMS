@@ -85,6 +85,13 @@ Each poll, per device:
 5. Creates an `Alert` **only** when severity got worse than it already was — an already-critical device
    doesn't spam a new alert on every single poll
 
+**Reading InfluxDB back out**: `GET /devices/:id/traffic-history?minutes=60` (`InfluxService.queryDeviceTraffic`,
+a Flux `pivot()` query) feeds the frontend's Traffic tab on page load. This didn't exist for a while —
+InfluxDB was write-only, so the "historical" graph actually only accumulated points live over Socket.io from
+the moment the tab happened to be open, resetting to empty on every refresh; a real history needed the poll
+interval's worth of tab-open time (5 minutes) just to get the 2 points a line chart needs to draw anything.
+`useLiveMetrics()` (frontend) now fetches this on mount and prepends it to the live-accumulated points.
+
 `SnmpProvider` is pluggable via `SNMP_PROVIDER=mock|real`, no code changes needed either way:
 - **`mock`** (default) — returns randomized-but-plausible metrics per device kind. No hardware needed.
 - **`real`** — polls actual devices via `net-snmp`. CPU (`hrProcessorTable`) and memory (`hrStorageTable`)

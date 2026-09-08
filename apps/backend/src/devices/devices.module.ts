@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { MonitoringModule } from '../monitoring/monitoring.module';
+import { InfluxModule } from '../influx/influx.module';
 import { DevicesController } from './devices.controller';
 import { ZoneDevicesController } from './zone-devices.controller';
 import { DevicesService } from './devices.service';
 
 @Module({
-  imports: [MonitoringModule],
+  imports: [MonitoringModule, InfluxModule],
   controllers: [ZoneDevicesController, DevicesController],
   providers: [DevicesService],
   exports: [DevicesService],
