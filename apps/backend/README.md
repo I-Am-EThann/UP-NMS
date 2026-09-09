@@ -54,6 +54,12 @@ object in MinIO and returns `{ url }` to use as a device's `imageUrl`. The bucke
 public-read automatically on boot (`MinioService.onModuleInit`) — if MinIO isn't reachable yet, this logs an
 error but doesn't crash the app; uploads just fail until it is.
 
+**Old images are cleaned up automatically** — `DevicesService.update()` deletes the previous image from MinIO
+whenever it's replaced or removed (fire-and-forget, logged on failure, never blocks the save), and `remove()`
+does the same when a device is deleted outright. Confirmed leak before this existed: neither path ever
+touched MinIO, so every replaced or removed image — and every deleted device's image — stayed as an orphaned
+object forever.
+
 ## Device Monitoring (SNMP + InfluxDB)
 
 `MonitoringScheduler` runs `MonitoringService.pollAllDevices()` on an interval (`SNMP_POLL_INTERVAL_MS`,
@@ -61,11 +67,17 @@ default 5 minutes), registered/cleaned up via `SchedulerRegistry` so it starts o
 shutdown (or when a test's `app.close()` runs).
 
 **Newly-added devices are also polled immediately**, outside the normal cycle — `DevicesService.create()`
-fires `MonitoringService.pollDeviceById()` right after the Prisma write, without awaiting it (so device
+fires `MonitoringService.primeDeviceHistory()` right after the Prisma write, without awaiting it (so device
 creation stays fast even if the device is slow to answer or unreachable). Without this, a device added just
 after a scheduled poll finishes would sit at its 0%/placeholder values for up to the full interval before
-anyone could tell whether it was actually working. Failures here are logged and swallowed — the normal
-scheduled poll picks the device up regardless of whether this one-off attempt succeeded.
+anyone could tell whether it was actually working. `primeDeviceHistory()` bursts a handful of polls (3, 15s
+apart, by default) rather than firing just one — the Traffic tab's chart needs 2+ InfluxDB points before it
+draws anything, and a single poll only ever leaves one point behind, so a lone immediate poll still meant the
+graph stayed empty until the *next scheduled* cycle (up to 5 more minutes). Bursting gets a real device to
+2-3 points within well under a minute of being added — genuinely "show the graph immediately", not just "poll
+once faster". `pollDeviceById()` (the single-poll building block underneath) is still there and still used by
+the normal scheduled cycle. Failures here are logged and swallowed either way — the normal scheduled poll
+picks the device up regardless of whether the immediate attempt(s) succeeded.
 
 **Per-device SNMP community override** — `Device.snmpCommunity` (nullable) lets one specific device use a
 different SNMP v2c community string than the server-wide default (`SNMP_COMMUNITY`). Confirmed necessary in
@@ -178,7 +190,7 @@ generate` has been run — useful in network-restricted environments (see the no
 
 | Method | Path            | Auth      | Description                          |
 |--------|-----------------|-----------|---------------------------------------|
-| GET    | `/api/health`   | —         | Liveness + Postgres connectivity check |
+| GET    | `/api/health`   | —         | Liveness + Postgres/InfluxDB/MinIO connectivity check |
 | POST   | `/api/auth/login`  | —      | Login, sets httpOnly JWT cookie        |
 | POST   | `/api/auth/logout` | —      | Clears the auth cookie                 |
 | GET    | `/api/auth/me`     | required | Returns the current user               |
@@ -243,7 +255,9 @@ src/
 │   ├── alerts.module.ts / .controller.ts / .service.ts → GET /api/alerts (filterable, joined, sorted)
 │   └── sort-alerts.util.ts      → pure function, mirrors the frontend's stats.ts sortAlerts() exactly
 ├── health/
-│   └── ...                → GET /api/health (checks Postgres connectivity via Prisma)
+│   └── ...                → GET /api/health (Postgres via Prisma, InfluxDB via a cheap buckets() Flux
+│                             query, MinIO via bucketExists() — any one down returns 503 with a per-service
+│                             breakdown, via Terminus throwing ServiceUnavailableException)
 ├── app.module.ts
 └── main.ts                 → global prefix "api", cookie-parser, CORS, validation pipe
 

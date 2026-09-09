@@ -137,6 +137,18 @@ export class InfluxService implements OnModuleDestroy {
     }
   }
 
+  /** Cheap reachability check for the health endpoint — lists buckets
+   *  (capped to 1 row) rather than writing/querying real data, so it
+   *  can't have side effects and stays fast even under load. */
+  async isHealthy(): Promise<boolean> {
+    try {
+      await this.queryApi.collectRows('buckets() |> limit(n: 1)');
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async onModuleDestroy() {
     await this.writeApi.close().catch(() => undefined);
   }

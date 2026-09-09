@@ -18,7 +18,9 @@ jest.mock('@influxdata/influxdb-client', () => {
   const actual = jest.requireActual('@influxdata/influxdb-client');
   return {
     ...actual,
-    InfluxDB: jest.fn().mockImplementation(() => ({ getWriteApi, getQueryApi })),
+    InfluxDB: jest
+      .fn()
+      .mockImplementation(() => ({ getWriteApi, getQueryApi })),
   };
 });
 
@@ -82,8 +84,16 @@ describe('InfluxService', () => {
   describe('queryDeviceTraffic', () => {
     it('maps pivoted Flux rows into { time, in, out } points', async () => {
       collectRows.mockResolvedValue([
-        { _time: '2026-01-01T00:00:00Z', trafficInMbps: '12.5', trafficOutMbps: '4.2' },
-        { _time: '2026-01-01T00:05:00Z', trafficInMbps: '18', trafficOutMbps: '9' },
+        {
+          _time: '2026-01-01T00:00:00Z',
+          trafficInMbps: '12.5',
+          trafficOutMbps: '4.2',
+        },
+        {
+          _time: '2026-01-01T00:05:00Z',
+          trafficInMbps: '18',
+          trafficOutMbps: '9',
+        },
       ]);
       const service = new InfluxService(makeConfig());
 
@@ -106,7 +116,9 @@ describe('InfluxService', () => {
     it('refuses to query a deviceId that looks unsafe to interpolate, without ever calling InfluxDB', async () => {
       const service = new InfluxService(makeConfig());
 
-      const result = await service.queryDeviceTraffic('d1"} evil flux injection');
+      const result = await service.queryDeviceTraffic(
+        'd1"} evil flux injection',
+      );
 
       expect(result).toEqual([]);
       expect(collectRows).not.toHaveBeenCalled();

@@ -256,4 +256,76 @@ describe('MonitoringService', () => {
       await expect(service.pollDeviceById('d1')).resolves.toBeUndefined();
     });
   });
+
+  describe('primeDeviceHistory', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('polls the requested number of times, waiting intervalMs between each', async () => {
+      deviceFindUnique.mockResolvedValue(baseSwitch);
+      pollDevice.mockResolvedValue({
+        reachable: true,
+        cpuUsagePercent: 10,
+        memoryUsagePercent: 20,
+      });
+
+      const done = service.primeDeviceHistory('d1', 3, 15_000);
+
+      // First poll happens immediately, without waiting on any timer.
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(deviceFindUnique).toHaveBeenCalledTimes(1);
+
+      // Advancing past each interval should trigger exactly one more poll —
+      // not a burst of extra calls, and not fewer than expected.
+      await jest.advanceTimersByTimeAsync(15_000);
+      expect(deviceFindUnique).toHaveBeenCalledTimes(2);
+
+      await jest.advanceTimersByTimeAsync(15_000);
+      expect(deviceFindUnique).toHaveBeenCalledTimes(3);
+
+      await done;
+      // No trailing wait after the last attempt — three attempts means
+      // exactly two 15s gaps, not three.
+      expect(pollDevice).toHaveBeenCalledTimes(3);
+    });
+
+    it('defaults to 3 attempts 15 seconds apart when not specified', async () => {
+      deviceFindUnique.mockResolvedValue(baseSwitch);
+      pollDevice.mockResolvedValue({
+        reachable: true,
+        cpuUsagePercent: 10,
+        memoryUsagePercent: 20,
+      });
+
+      const done = service.primeDeviceHistory('d1');
+      await jest.advanceTimersByTimeAsync(30_000);
+      await done;
+
+      expect(pollDevice).toHaveBeenCalledTimes(3);
+    });
+
+    it('stops cleanly (no throw) if the device gets deleted partway through the burst', async () => {
+      deviceFindUnique
+        .mockResolvedValueOnce(baseSwitch)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null);
+      pollDevice.mockResolvedValue({
+        reachable: true,
+        cpuUsagePercent: 10,
+        memoryUsagePercent: 20,
+      });
+
+      const done = service.primeDeviceHistory('d1', 3, 15_000);
+      await jest.advanceTimersByTimeAsync(30_000);
+
+      await expect(done).resolves.toBeUndefined();
+      expect(pollDevice).toHaveBeenCalledTimes(1); // only the first attempt found a real device
+    });
+  });
 });

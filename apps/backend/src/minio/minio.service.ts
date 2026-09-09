@@ -84,4 +84,14 @@ export class MinioService implements OnModuleInit {
       this.logger.warn(`Failed to delete "${objectKey}": ${String(error)}`);
     });
   }
+
+  /** Cheap reachability check for the health endpoint. */
+  async isHealthy(): Promise<boolean> {
+    try {
+      await this.client.bucketExists(this.bucket);
+      return true;
+    } catch {
+      return false;
+    }
+  }
 }

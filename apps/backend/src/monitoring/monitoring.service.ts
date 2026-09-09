@@ -79,6 +79,40 @@ export class MonitoringService {
     }
   }
 
+  /**
+   * Polls a brand-new device a handful of times a few seconds apart,
+   * instead of just once. Exists specifically so the Traffic tab's chart
+   * has something to draw the very first time someone opens it.
+   *
+   * Context: InfluxDB writes only ever happen once per poll, and the chart
+   * needs 2+ points before it draws anything (a line needs two ends). A
+   * single pollDeviceById() call — which is all device creation triggered
+   * before this existed — leaves exactly one InfluxDB point behind, so the
+   * chart still shows "collecting data" until the next *scheduled* poll
+   * lands, up to a full SNMP_POLL_INTERVAL_MS (5 minutes by default) later.
+   * Bursting a few extra polls tens of seconds apart gets a real device to
+   * 2-3 points within under a minute of being added, which is what "show
+   * the graph immediately" actually requires given how the chart works —
+   * not just polling once faster.
+   *
+   * Fire-and-forget from the caller, same as pollDeviceById: never throws,
+   * and a device deleted partway through just stops (pollDeviceById itself
+   * already no-ops once the device is gone).
+   */
+  async primeDeviceHistory(
+    deviceId: string,
+    attempts = 3,
+    intervalMs = 15_000,
+  ): Promise<void> {
+    for (let i = 0; i < attempts; i++) {
+      await this.pollDeviceById(deviceId);
+      const isLastAttempt = i === attempts - 1;
+      if (!isLastAttempt) {
+        await new Promise((resolve) => setTimeout(resolve, intervalMs));
+      }
+    }
+  }
+
   async pollAllDevices(): Promise<PollAllResult> {
     const devices: DeviceRow[] = await this.prisma.device.findMany({
       select: {

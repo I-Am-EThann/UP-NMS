@@ -2,6 +2,7 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { PrismaService } from '../prisma/prisma.service';
 import { MonitoringService } from '../monitoring/monitoring.service';
+import { MinioService } from '../minio/minio.service';
 import { DevicesService } from './devices.service';
 
 describe('DevicesService', () => {
@@ -13,10 +14,14 @@ describe('DevicesService', () => {
   const deviceUpdate = jest.fn();
   const deviceDelete = jest.fn();
   const pollDeviceById = jest.fn();
+  const primeDeviceHistory = jest.fn();
+  const deleteByUrl = jest.fn();
 
   beforeEach(async () => {
     jest.clearAllMocks();
     pollDeviceById.mockResolvedValue(undefined);
+    primeDeviceHistory.mockResolvedValue(undefined);
+    deleteByUrl.mockResolvedValue(undefined);
 
     const moduleRef = await Test.createTestingModule({
       providers: [
@@ -34,7 +39,11 @@ describe('DevicesService', () => {
             },
           },
         },
-        { provide: MonitoringService, useValue: { pollDeviceById } },
+        {
+          provide: MonitoringService,
+          useValue: { pollDeviceById, primeDeviceHistory },
+        },
+        { provide: MinioService, useValue: { deleteByUrl } },
       ],
     }).compile();
 
@@ -141,11 +150,11 @@ describe('DevicesService', () => {
       ).rejects.toBeInstanceOf(ConflictException);
     });
 
-    it('triggers an immediate poll of the new device without waiting for it', async () => {
+    it('primes traffic history for the new device (bursts a few polls) without waiting for it', async () => {
       zoneFindUnique.mockResolvedValue({ id: 'z1', name: 'Zone' });
       deviceCreate.mockResolvedValue({ id: 'd1' });
-      // Never resolves — proves create() doesn't await the poll.
-      pollDeviceById.mockReturnValue(new Promise(() => {}));
+      // Never resolves — proves create() doesn't await the burst-poll.
+      primeDeviceHistory.mockReturnValue(new Promise(() => {}));
 
       const result = await service.create('z1', {
         kind: 'SWITCH',
@@ -156,13 +165,13 @@ describe('DevicesService', () => {
       });
 
       expect(result).toEqual({ id: 'd1' });
-      expect(pollDeviceById).toHaveBeenCalledWith('d1');
+      expect(primeDeviceHistory).toHaveBeenCalledWith('d1');
     });
 
-    it('does not let a failed immediate poll surface as a create() error', async () => {
+    it('does not let a failed history-priming burst surface as a create() error', async () => {
       zoneFindUnique.mockResolvedValue({ id: 'z1', name: 'Zone' });
       deviceCreate.mockResolvedValue({ id: 'd1' });
-      pollDeviceById.mockRejectedValue(new Error('device unreachable'));
+      primeDeviceHistory.mockRejectedValue(new Error('device unreachable'));
 
       await expect(
         service.create('z1', {
@@ -217,9 +226,74 @@ describe('DevicesService', () => {
       // updateDevice() treats as "field not touched" and never sends over
       // the wire at all. The frontend now sends "" instead to signal an
       // explicit removal; this asserts the backend actually clears it.
-      deviceUpdate.mockResolvedValue({ id: 'd1' });
+      deviceFindUnique.mockResolvedValue({
+        imageUrl: 'http://minio/devices/old.jpg',
+      });
+      deviceUpdate.mockResolvedValue({ id: 'd1', imageUrl: null });
       await service.update('d1', { imageUrl: '' });
       expect(deviceUpdate.mock.calls[0][0].data).toEqual({ imageUrl: null });
+    });
+
+    it('deletes the old image from MinIO when it is replaced with a new one', async () => {
+      // Regression coverage: confirmed leak — replacing or removing a
+      // device's image only ever overwrote the DB column. The old file
+      // stayed in MinIO forever with nothing pointing at it.
+      deviceFindUnique.mockResolvedValue({
+        imageUrl: 'http://minio/devices/old.jpg',
+      });
+      deviceUpdate.mockResolvedValue({
+        id: 'd1',
+        imageUrl: 'http://minio/devices/new.jpg',
+      });
+
+      await service.update('d1', { imageUrl: 'http://minio/devices/new.jpg' });
+
+      expect(deleteByUrl).toHaveBeenCalledWith('http://minio/devices/old.jpg');
+    });
+
+    it('deletes the old image from MinIO when it is removed entirely', async () => {
+      deviceFindUnique.mockResolvedValue({
+        imageUrl: 'http://minio/devices/old.jpg',
+      });
+      deviceUpdate.mockResolvedValue({ id: 'd1', imageUrl: null });
+
+      await service.update('d1', { imageUrl: '' });
+
+      expect(deleteByUrl).toHaveBeenCalledWith('http://minio/devices/old.jpg');
+    });
+
+    it('does not touch MinIO when the device had no image to begin with', async () => {
+      deviceFindUnique.mockResolvedValue({ imageUrl: null });
+      deviceUpdate.mockResolvedValue({
+        id: 'd1',
+        imageUrl: 'http://minio/devices/new.jpg',
+      });
+
+      await service.update('d1', { imageUrl: 'http://minio/devices/new.jpg' });
+
+      expect(deleteByUrl).not.toHaveBeenCalled();
+    });
+
+    it('does not query or touch MinIO at all when the edit does not involve the image field', async () => {
+      deviceUpdate.mockResolvedValue({ id: 'd1', name: 'Renamed' });
+
+      await service.update('d1', { name: 'Renamed' });
+
+      expect(deviceFindUnique).not.toHaveBeenCalled();
+      expect(deleteByUrl).not.toHaveBeenCalled();
+    });
+
+    it('does not fail the edit if the MinIO cleanup itself fails', async () => {
+      deviceFindUnique.mockResolvedValue({
+        imageUrl: 'http://minio/devices/old.jpg',
+      });
+      deviceUpdate.mockResolvedValue({ id: 'd1', imageUrl: null });
+      deleteByUrl.mockRejectedValue(new Error('MinIO unreachable'));
+
+      await expect(service.update('d1', { imageUrl: '' })).resolves.toEqual({
+        id: 'd1',
+        imageUrl: null,
+      });
     });
   });
 
@@ -238,6 +312,39 @@ describe('DevicesService', () => {
       await expect(service.remove('missing')).rejects.toBeInstanceOf(
         NotFoundException,
       );
+    });
+
+    it('deletes the device image from MinIO when the device had one', async () => {
+      // Regression coverage: same leak class as update() above — deleting
+      // a device entirely used to just drop the Postgres row and leave its
+      // uploaded image behind in MinIO forever, with nothing referencing
+      // it anymore.
+      deviceDelete.mockResolvedValue({
+        id: 'd1',
+        imageUrl: 'http://minio/devices/old.jpg',
+      });
+
+      await service.remove('d1');
+
+      expect(deleteByUrl).toHaveBeenCalledWith('http://minio/devices/old.jpg');
+    });
+
+    it('does not touch MinIO when the removed device had no image', async () => {
+      deviceDelete.mockResolvedValue({ id: 'd1', imageUrl: null });
+
+      await service.remove('d1');
+
+      expect(deleteByUrl).not.toHaveBeenCalled();
+    });
+
+    it('does not fail the delete if the MinIO cleanup itself fails', async () => {
+      deviceDelete.mockResolvedValue({
+        id: 'd1',
+        imageUrl: 'http://minio/devices/old.jpg',
+      });
+      deleteByUrl.mockRejectedValue(new Error('MinIO unreachable'));
+
+      await expect(service.remove('d1')).resolves.toBeUndefined();
     });
   });
 });

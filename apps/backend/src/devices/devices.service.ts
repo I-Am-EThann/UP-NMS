@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MonitoringService } from '../monitoring/monitoring.service';
+import { MinioService } from '../minio/minio.service';
 import { CreateDeviceDto } from './dto/create-device.dto';
 import { UpdateDeviceDto } from './dto/update-device.dto';
 
@@ -20,6 +21,7 @@ export class DevicesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly monitoring: MonitoringService,
+    private readonly minio: MinioService,
   ) {}
 
   private async assertZoneExists(zoneId: string): Promise<void> {
@@ -81,12 +83,17 @@ export class DevicesService {
       const deviceId: string = device.id;
       // Fire-and-forget: don't make the person wait for an SNMP round-trip
       // (up to the 8s timeout, or a full retry) just to see their new
-      // device appear. pollDeviceById never throws — a failure here just
-      // means the device sits at its 0%/placeholder defaults until the
-      // next scheduled poll, exactly as it did before this feature existed.
-      this.monitoring.pollDeviceById(deviceId).catch((error: unknown) => {
+      // device appear. primeDeviceHistory() polls a few times a few
+      // seconds apart rather than just once — the Traffic tab's chart
+      // needs 2+ data points before it draws anything, and a single poll
+      // only ever leaves one InfluxDB point behind, so "show the graph
+      // immediately" needs more than just "poll faster once". Never
+      // throws — a failure here just means the device sits at its
+      // 0%/placeholder defaults until the next scheduled poll, exactly as
+      // it did before this feature existed.
+      this.monitoring.primeDeviceHistory(deviceId).catch((error: unknown) => {
         this.logger.warn(
-          `Unexpected error from immediate poll of new device ${deviceId}: ${
+          `Unexpected error priming history for new device ${deviceId}: ${
             error instanceof Error ? error.message : String(error)
           }`,
         );
@@ -101,8 +108,20 @@ export class DevicesService {
   }
 
   async update(id: string, dto: UpdateDeviceDto) {
+    // Need the OLD imageUrl before overwriting it, so we know what to
+    // delete from MinIO afterward — but only fetch it when the image is
+    // actually part of this update, to avoid an extra query on every
+    // ordinary edit (renaming a device, changing its IP, etc).
+    const isChangingImage = dto.imageUrl !== undefined;
+    const previous = isChangingImage
+      ? await this.prisma.device.findUnique({
+          where: { id },
+          select: { imageUrl: true },
+        })
+      : null;
+
     try {
-      return await this.prisma.device.update({
+      const updated = await this.prisma.device.update({
         where: { id },
         data: {
           ...(dto.name !== undefined ? { name: dto.name } : {}),
@@ -120,6 +139,25 @@ export class DevicesService {
         },
         include: { ports: { orderBy: { portNumber: 'asc' } } },
       });
+
+      // Clean up the replaced/removed image only after the DB write has
+      // actually succeeded, and only if there was an old one and it's
+      // genuinely different from what's there now. Fire-and-forget: a
+      // failed cleanup here shouldn't fail the edit the person is waiting
+      // on — worst case is one orphaned file, logged for someone to clean
+      // up by hand, not a broken save.
+      if (previous?.imageUrl && previous.imageUrl !== updated.imageUrl) {
+        const oldImageUrl: string = previous.imageUrl;
+        this.minio.deleteByUrl(oldImageUrl).catch((error: unknown) => {
+          this.logger.warn(
+            `Failed to delete replaced image for device ${id}: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          );
+        });
+      }
+
+      return updated;
     } catch (error) {
       if (isPrismaKnownError(error) && error.code === 'P2002') {
         throw new ConflictException('Another device already uses this IP');
@@ -133,7 +171,20 @@ export class DevicesService {
 
   async remove(id: string): Promise<void> {
     try {
-      await this.prisma.device.delete({ where: { id } });
+      const deleted = await this.prisma.device.delete({ where: { id } });
+      // Same fire-and-forget reasoning as update() above — the device is
+      // already gone from Postgres at this point regardless of whether
+      // this cleanup succeeds.
+      if (deleted.imageUrl) {
+        const oldImageUrl: string = deleted.imageUrl;
+        this.minio.deleteByUrl(oldImageUrl).catch((error: unknown) => {
+          this.logger.warn(
+            `Failed to delete image for removed device ${id}: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          );
+        });
+      }
     } catch (error) {
       if (isPrismaKnownError(error) && error.code === 'P2025') {
         throw new NotFoundException(`Device "${id}" not found`);
